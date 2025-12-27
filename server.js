@@ -16,7 +16,6 @@ const getSupabase = () => {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_ANON_KEY;
   if (!url || !key) {
-    // In production, log warning but don't crash the server until an actual upload is attempted
     console.warn("Supabase environment variables (SUPABASE_URL, SUPABASE_ANON_KEY) are currently missing.");
     return null;
   }
@@ -42,7 +41,7 @@ const pool = new Pool({
  */
 const uploadToSupabase = async (file, folder = 'products') => {
   const sb = getSupabase();
-  if (!sb) throw new Error("Supabase client is not initialized. Check environment variables.");
+  if (!sb) throw new Error("Supabase client is not initialized.");
   
   const filename = `${Date.now()}-${file.originalname.replace(/[^a-zA-Z0-9.]/g, '_')}`;
   const filePath = `${folder}/${filename}`;
@@ -54,10 +53,7 @@ const uploadToSupabase = async (file, folder = 'products') => {
       upsert: false
     });
 
-  if (error) {
-    console.error("Supabase Upload Error:", error);
-    throw error;
-  }
+  if (error) throw error;
 
   const { data: { publicUrl } } = sb.storage
     .from('product-images')
@@ -144,7 +140,7 @@ const initDb = async () => {
         ]
       );
     }
-    console.log("Database ready.");
+    console.log("Database initialized.");
   } catch (err) {
     console.error("DB Init Error:", err.message);
   }
@@ -175,7 +171,7 @@ const mapRowToProduct = (r) => ({
   createdAt: r.created_at
 });
 
-// Auth
+// API Routes
 app.post('/api/login', (req, res) => {
   if (req.body.password === ADMIN_PASS) {
     const token = jwt.sign({ admin: true }, JWT_SECRET, { expiresIn: '30d' });
@@ -184,7 +180,6 @@ app.post('/api/login', (req, res) => {
   res.status(401).json({ error: 'Wrong password' });
 });
 
-// Products
 app.get('/api/products', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM products ORDER BY created_at DESC');
@@ -195,8 +190,6 @@ app.get('/api/products', async (req, res) => {
 app.post('/api/admin/products', authenticateAdmin, upload.array('images', 3), async (req, res) => {
   try {
     const b = req.body;
-    if (req.files.length > 3) return res.status(400).json({ error: 'Max 3 images allowed' });
-    
     const uploadPromises = req.files.map(file => uploadToSupabase(file, 'products'));
     const imageUrls = await Promise.all(uploadPromises);
 
@@ -209,36 +202,6 @@ app.post('/api/admin/products', authenticateAdmin, upload.array('images', 3), as
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.put('/api/products/:id', authenticateAdmin, upload.array('images', 3), async (req, res) => {
-  try {
-    const b = req.body;
-    let existingImages = JSON.parse(b.existingImages || '[]');
-    const newFiles = req.files || [];
-    
-    if (existingImages.length + newFiles.length > 3) {
-      return res.status(400).json({ error: 'Max 3 images total allowed' });
-    }
-
-    const uploadPromises = newFiles.map(file => uploadToSupabase(file, 'products'));
-    const newUrls = await Promise.all(uploadPromises);
-    const finalImages = [...existingImages, ...newUrls];
-
-    await pool.query(
-      `UPDATE products SET name_en=$1, name_ku=$2, name_ar=$3, description_en=$4, description_ku=$5, description_ar=$6, price=$7, discount=$8, category_id=$9, availability=$10, images=$11 WHERE id=$12`,
-      [b.name_en, b.name_ku, b.name_ar, b.description_en, b.description_ku, b.description_ar, b.price, b.discount, b.category_id || null, b.availability === 'true', JSON.stringify(finalImages), req.params.id]
-    );
-    res.json({ success: true });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.delete('/api/products/:id', authenticateAdmin, async (req, res) => {
-  try {
-    await pool.query('DELETE FROM products WHERE id = $1', [req.params.id]);
-    res.json({ success: true });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// Categories
 app.get('/api/categories', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM categories ORDER BY id ASC');
@@ -250,42 +213,6 @@ app.get('/api/categories', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/admin/categories', authenticateAdmin, upload.single('image'), async (req, res) => {
-  try {
-    const b = req.body;
-    const imageUrl = req.file ? await uploadToSupabase(req.file, 'categories') : '';
-    await pool.query(`INSERT INTO categories (name_en, name_ku, name_ar, image) VALUES ($1, $2, $3, $4)`, [b.name_en, b.name_ku, b.name_ar, imageUrl]);
-    res.json({ success: true });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.put('/api/admin/categories/:id', authenticateAdmin, upload.single('image'), async (req, res) => {
-  try {
-    const b = req.body;
-    let updateQuery = `UPDATE categories SET name_en=$1, name_ku=$2, name_ar=$3`;
-    let params = [b.name_en, b.name_ku, b.name_ar];
-    
-    if (req.file) {
-      const imageUrl = await uploadToSupabase(req.file, 'categories');
-      updateQuery += `, image=$4 WHERE id=$5`;
-      params.push(imageUrl, req.params.id);
-    } else {
-      updateQuery += ` WHERE id=$4`;
-      params.push(req.params.id);
-    }
-    await pool.query(updateQuery, params);
-    res.json({ success: true });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.delete('/api/admin/categories/:id', authenticateAdmin, async (req, res) => {
-  try {
-    await pool.query('DELETE FROM categories WHERE id = $1', [req.params.id]);
-    res.json({ success: true });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// Orders
 app.post('/api/orders', async (req, res) => {
   try {
     const b = req.body;
@@ -300,31 +227,6 @@ app.post('/api/orders', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.get('/api/admin/orders', authenticateAdmin, async (req, res) => {
-  try {
-    const result = await pool.query('SELECT * FROM orders ORDER BY created_at DESC');
-    res.json(result.rows);
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.get('/api/orders/track', async (req, res) => {
-  try {
-    const { id, phone } = req.query;
-    const result = await pool.query('SELECT * FROM orders WHERE id = $1 AND phone = $2', [id, phone]);
-    if (result.rows.length === 0) return res.status(404).json({ error: 'Order not found' });
-    res.json(result.rows[0]);
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.put('/api/orders/:id', authenticateAdmin, async (req, res) => {
-  try {
-    const { status, shipping_driver } = req.body;
-    await pool.query('UPDATE orders SET status=$1, shipping_driver=$2 WHERE id=$3', [status, shipping_driver, req.params.id]);
-    res.json({ success: true });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// Settings
 app.get('/api/settings', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM settings LIMIT 1');
@@ -332,58 +234,12 @@ app.get('/api/settings', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.put('/api/settings', authenticateAdmin, async (req, res) => {
-  try {
-    const s = req.body;
-    await pool.query(
-      `UPDATE settings SET about_text=$1, phones=$2, email=$3, address=$4, map_embed=$5, socials=$6 WHERE id=(SELECT id FROM settings LIMIT 1)`,
-      [JSON.stringify(s.aboutText), JSON.stringify(s.phones), s.email, s.address, s.map_embed, JSON.stringify(s.socials)]
-    );
-    res.json({ success: true });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.put('/api/admin/settings/home_feature_image', authenticateAdmin, upload.single('image'), async (req, res) => {
-  try {
-    const imageUrl = await uploadToSupabase(req.file, 'settings');
-    await pool.query('UPDATE settings SET home_feature_image=$1 WHERE id=(SELECT id FROM settings LIMIT 1)', [imageUrl]);
-    res.json({ image: imageUrl });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.put('/api/admin/settings/about_image', authenticateAdmin, upload.single('image'), async (req, res) => {
-  try {
-    const imageUrl = await uploadToSupabase(req.file, 'settings');
-    await pool.query('UPDATE settings SET about_image=$1 WHERE id=(SELECT id FROM settings LIMIT 1)', [imageUrl]);
-    res.json({ image: imageUrl });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// Bulk Actions
-app.delete('/api/admin/products/bulk', authenticateAdmin, async (req, res) => {
-  try {
-    await pool.query('DELETE FROM products WHERE id = ANY($1)', [req.body.ids]);
-    res.json({ success: true });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.put('/api/admin/products/bulk/discount', authenticateAdmin, async (req, res) => {
-  try {
-    await pool.query('UPDATE products SET discount=$1 WHERE id = ANY($2)', [req.body.discount, req.body.ids]);
-    res.json({ success: true });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.put('/api/admin/products/bulk/availability', authenticateAdmin, async (req, res) => {
-  try {
-    await pool.query('UPDATE products SET availability=$1 WHERE id = ANY($2)', [req.body.availability, req.body.ids]);
-    res.json({ success: true });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// SPA Support
+// SPA Support: Serve React build and redirect all other routes to index.html
 const distPath = path.resolve(__dirname, 'dist');
 app.use(express.static(distPath));
-app.get('*', (req, res) => res.sendFile(path.join(distPath, 'index.html')));
+app.get('*', (req, res) => {
+  if (req.url.startsWith('/api')) return res.status(404).json({ error: 'API route not found' });
+  res.sendFile(path.join(distPath, 'index.html'));
+});
 
 app.listen(PORT, () => console.log(`Server live on port ${PORT}`));

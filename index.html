@@ -38,7 +38,6 @@
       .no-scrollbar::-webkit-scrollbar { display: none; }
       .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       
-      /* Glassmorphism utility */
       .glass {
         background: rgba(255, 255, 255, 0.7);
         backdrop-filter: blur(10px);
@@ -63,7 +62,7 @@
 </head>
   <body class="bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 overflow-x-hidden selection:bg-brand selection:text-white">
     <div id="root"></div>
-    <script type="module" src="/index.tsx"></script>
+    <script type="module" src="/main.tsx"></script>
     <script>
       const observer = new IntersectionObserver((entries) => {
         entries.forEach((entry) => {
