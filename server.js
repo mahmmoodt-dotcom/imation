@@ -1,4 +1,3 @@
-
 const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
@@ -10,11 +9,18 @@ const { createClient } = require('@supabase/supabase-js');
 const app = express();
 const upload = multer({ storage: multer.memoryStorage() });
 
-// Supabase Configuration
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_ANON_KEY
-);
+// Lazy initialization for Supabase to prevent boot crash if env vars are missing
+let supabaseInstance = null;
+const getSupabase = () => {
+  if (supabaseInstance) return supabaseInstance;
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_ANON_KEY;
+  if (!url || !key) {
+    throw new Error("Supabase environment variables (SUPABASE_URL, SUPABASE_ANON_KEY) are missing.");
+  }
+  supabaseInstance = createClient(url, key);
+  return supabaseInstance;
+};
 
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
@@ -31,14 +37,13 @@ const pool = new Pool({
 
 /**
  * Helper to upload a Multer file buffer to Supabase Storage
- * @param {Object} file - The file object from Multer
- * @param {string} folder - The folder path within the bucket
  */
 const uploadToSupabase = async (file, folder = 'products') => {
+  const sb = getSupabase();
   const filename = `${Date.now()}-${file.originalname.replace(/[^a-zA-Z0-9.]/g, '_')}`;
   const filePath = `${folder}/${filename}`;
   
-  const { data, error } = await supabase.storage
+  const { data, error } = await sb.storage
     .from('product-images')
     .upload(filePath, file.buffer, {
       contentType: file.mimetype,
@@ -50,7 +55,7 @@ const uploadToSupabase = async (file, folder = 'products') => {
     throw error;
   }
 
-  const { data: { publicUrl } } = supabase.storage
+  const { data: { publicUrl } } = sb.storage
     .from('product-images')
     .getPublicUrl(filePath);
 
