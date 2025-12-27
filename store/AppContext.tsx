@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Product, Category, CartItem, Order, Language, ShopSettings } from '../types';
 import { INITIAL_PRODUCTS, INITIAL_CATEGORIES } from '../constants';
@@ -117,11 +116,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
-      await Promise.all([refreshProducts(), refreshCategories()]);
-      const sData = await safeFetchJson(`${API_BASE}/settings`);
-      if (sData && !sData.isError) setSettings(sData);
-      if (isLoggedIn) await refreshOrders();
-      setIsLoading(false);
+      try {
+        await Promise.all([refreshProducts(), refreshCategories()]);
+        const sData = await safeFetchJson(`${API_BASE}/settings`);
+        if (sData && !sData.isError) setSettings(sData);
+        if (isLoggedIn) await refreshOrders();
+      } catch (err) {
+        console.error("Initialization Error:", err);
+      } finally {
+        setIsLoading(false);
+      }
     };
     fetchData();
   }, [isLoggedIn]);

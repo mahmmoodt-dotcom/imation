@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { AppProvider, useApp } from './store/AppContext';
 import { Navbar } from './components/Navbar';
