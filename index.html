@@ -37,6 +37,16 @@
       .animate-float { animation: float 4s ease-in-out infinite; }
       .no-scrollbar::-webkit-scrollbar { display: none; }
       .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      
+      /* Glassmorphism utility */
+      .glass {
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+      }
+      .dark .glass {
+        background: rgba(17, 24, 39, 0.7);
+      }
     </style>
   <script type="importmap">
 {

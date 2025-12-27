@@ -1,4 +1,3 @@
-
 import { TranslationDictionary } from './types';
 
 export const translations: TranslationDictionary = {
@@ -8,6 +7,7 @@ export const translations: TranslationDictionary = {
   contact: { en: 'Contact', ckb: 'پەیوەندی', ar: 'اتصل بنا' },
   admin: { en: 'Admin', ckb: 'سەرپەرشتیار', ar: 'المسؤول' },
   cart: { en: 'Cart', ckb: 'سەبەتە', ar: 'السلة' },
+  wishlist: { en: 'Wishlist', ckb: 'دڵخوازەکان', ar: 'المفضلة' },
   search: { en: 'Search products...', ckb: 'گەڕان بۆ کاڵاکان...', ar: 'البحث عن المنتجات...' },
   categories: { en: 'Categories', ckb: 'هاوپۆلەکان', ar: 'الفئات' },
   price_range: { en: 'Price Range', ckb: 'مەودای نرخ', ar: 'نطاق السعر' },
@@ -15,6 +15,7 @@ export const translations: TranslationDictionary = {
   checkout: { en: 'Checkout', ckb: 'تەواوکردنی کڕین', ar: 'إتمام الشراء' },
   total: { en: 'Total', ckb: 'کۆی گشتی', ar: 'المجموع' },
   empty_cart: { en: 'Your cart is empty', ckb: 'سەبەتەکەت بەتاڵە', ar: 'سلتك فارغة' },
+  empty_wishlist: { en: 'Your wishlist is empty', ckb: 'دڵخوازەکەت بەتاڵە', ar: 'قائمة المفضلة فارغة' },
   cod: { en: 'Cash on Delivery', ckb: 'پارەدان لە کاتی وەرگرتن', ar: 'الدفع عند الاستلام' },
   full_name: { en: 'Full Name', ckb: 'ناوی تەواو', ar: 'الاسم الكامل' },
   address: { en: 'Delivery Address', ckb: 'ناونیشانی گەیاندن', ar: 'عنوان التوصيل' },
@@ -110,6 +111,8 @@ export const translations: TranslationDictionary = {
   related_products: { en: 'Related Products', ckb: 'کاڵا پەیوەندیدارەکان', ar: 'منتجات ذات صلة' },
   specifications: { en: 'Specifications', ckb: 'تایبەتمەندییەکان', ar: 'المواصفات' },
   product_details: { en: 'Product Details', ckb: 'وردەکاری کاڵا', ar: 'تفاصيل المنتج' },
-  unavailable: { en: 'Unavailable', ckb: 'بەردەست نییە', ar: 'غير متوفر' },
-  available: { en: 'Available', ckb: 'بەردەستە', ar: 'متوفر' },
+  reviews: { en: 'Customer Reviews', ckb: 'پێداچوونەوەی کڕیاران', ar: 'مراجعات العملاء' },
+  write_review: { en: 'Write a Review', ckb: 'پێداچوونەوە بنووسە', ar: 'كتابة مراجعة' },
+  rating: { en: 'Rating', ckb: 'هەڵسەنگاندن', ar: 'التقييم' },
+  best_sellers: { en: 'Best Sellers', ckb: 'پڕفرۆشترینەکان', ar: 'الأكثر مبيعاً' },
 };

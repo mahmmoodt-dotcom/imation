@@ -23,6 +23,7 @@ interface AppContextType {
   products: Product[];
   categories: Category[];
   cart: CartItem[];
+  wishlist: string[];
   orders: Order[];
   settings: ShopSettings;
   lang: Language;
@@ -35,6 +36,7 @@ interface AppContextType {
   removeFromCart: (productId: string) => void;
   updateCartQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
+  toggleWishlist: (productId: string) => void;
   addOrder: (order: any) => Promise<Order | null>;
   trackOrder: (id: string, phone: string) => Promise<Order | null>;
   updateProduct: (product: Product) => Promise<boolean>;
@@ -67,6 +69,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const saved = localStorage.getItem('cart');
     return saved ? JSON.parse(saved) : [];
   });
+  const [wishlist, setWishlist] = useState<string[]>(() => {
+    const saved = localStorage.getItem('wishlist');
+    return saved ? JSON.parse(saved) : [];
+  });
   const [orders, setOrders] = useState<Order[]>([]);
   const [settings, setSettings] = useState<ShopSettings>(DEFAULT_SETTINGS);
   const [lang, setLangState] = useState<Language>(() => (localStorage.getItem('lang') as Language) || 'en');
@@ -76,12 +82,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   useEffect(() => {
     localStorage.setItem('cart', JSON.stringify(cart));
+    localStorage.setItem('wishlist', JSON.stringify(wishlist));
     localStorage.setItem('lang', lang);
     localStorage.setItem('theme', theme);
     document.documentElement.dir = (lang === 'ar' || lang === 'ckb') ? 'rtl' : 'ltr';
     if (theme === 'dark') document.documentElement.classList.add('dark');
     else document.documentElement.classList.remove('dark');
-  }, [cart, lang, theme]);
+  }, [cart, wishlist, lang, theme]);
 
   const safeFetchJson = async (url: string, options?: RequestInit) => {
     try {
@@ -167,6 +174,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
   const clearCart = () => setCart([]);
 
+  const toggleWishlist = (productId: string) => {
+    setWishlist(prev => prev.includes(productId) ? prev.filter(id => id !== productId) : [...prev, productId]);
+  };
+
   const addOrder = async (orderData: any) => {
     const response = await safeFetchJson(`${API_BASE}/orders`, {
       method: 'POST',
@@ -227,9 +238,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   return (
     <AppContext.Provider value={{
-      products, categories, cart, orders, settings, lang, theme, isLoggedIn, isLoading,
+      products, categories, cart, wishlist, orders, settings, lang, theme, isLoggedIn, isLoading,
       setLang: setLangState, toggleTheme: () => setTheme(t => t === 'light' ? 'dark' : 'light'),
-      addToCart, removeFromCart, updateCartQuantity, clearCart,
+      addToCart, removeFromCart, updateCartQuantity, clearCart, toggleWishlist,
       addOrder, trackOrder, updateProduct, deleteProduct, addProduct, bulkDeleteProducts, bulkUpdateDiscountAmount, bulkUpdateAvailability,
       updateCategory, addCategory, deleteCategory, updateOrderStatus, updateOrder, updateSettings, updateAboutSettings, updateHomeFeatureImage, updateAboutImage,
       login, logout, refreshProducts, refreshCategories
