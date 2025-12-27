@@ -1,4 +1,4 @@
-import { TranslationDictionary } from './types';
+import { TranslationDictionary, Language } from './types';
 
 export const translations: TranslationDictionary = {
   home: { en: 'Home', ckb: 'سەرەکی', ar: 'الرئيسية' },
@@ -115,4 +115,14 @@ export const translations: TranslationDictionary = {
   write_review: { en: 'Write a Review', ckb: 'پێداچوونەوە بنووسە', ar: 'كتابة مراجعة' },
   rating: { en: 'Rating', ckb: 'هەڵسەنگاندن', ar: 'التقييم' },
   best_sellers: { en: 'Best Sellers', ckb: 'پڕفرۆشترینەکان', ar: 'الأكثر مبيعاً' },
+};
+
+/**
+ * Safe utility to get a translation string.
+ * It will try the target language, then English, then fall back to the key name.
+ */
+export const getSafeTranslation = (key: string, lang: Language): string => {
+  const entry = translations[key];
+  if (!entry) return key;
+  return entry[lang] || entry['en'] || key;
 };

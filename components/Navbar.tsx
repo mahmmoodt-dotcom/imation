@@ -1,6 +1,5 @@
 import React from 'react';
 import { useApp } from '../store/AppContext';
-import { translations } from '../translations';
 import { LanguageSwitcher } from './LanguageSwitcher';
 
 interface NavbarProps {
@@ -9,8 +8,7 @@ interface NavbarProps {
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ onPageChange, currentPage }) => {
-  const { lang, cart, wishlist, isLoggedIn, theme, toggleTheme, settings } = useApp();
-  const t = translations;
+  const { lang, cart, wishlist, theme, toggleTheme, settings, t } = useApp();
 
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
   const wishlistCount = wishlist.length;
@@ -21,25 +19,25 @@ export const Navbar: React.FC<NavbarProps> = ({ onPageChange, currentPage }) => 
         onClick={() => onPageChange('home')}
         className={`${isMobile ? 'text-[11px]' : 'text-sm'} font-bold uppercase tracking-wider ${currentPage === 'home' ? 'text-brand' : 'text-gray-500 dark:text-gray-400'} hover:text-brand transition-colors whitespace-nowrap`}
       >
-        {t.home[lang]}
+        {t('home')}
       </button>
       <button 
         onClick={() => onPageChange('shop')}
         className={`${isMobile ? 'text-[11px]' : 'text-sm'} font-bold uppercase tracking-wider ${currentPage === 'shop' || currentPage === 'product-details' ? 'text-brand' : 'text-gray-500 dark:text-gray-400'} hover:text-brand transition-colors whitespace-nowrap`}
       >
-        {t.shop[lang]}
+        {t('shop')}
       </button>
       <button 
         onClick={() => onPageChange('track')}
         className={`${isMobile ? 'text-[11px]' : 'text-sm'} font-bold uppercase tracking-wider ${currentPage === 'track' ? 'text-brand' : 'text-gray-500 dark:text-gray-400'} hover:text-brand transition-colors whitespace-nowrap`}
       >
-        {t.track_order[lang]}
+        {t('track_order')}
       </button>
       <button 
         onClick={() => onPageChange('about')}
         className={`${isMobile ? 'text-[11px]' : 'text-sm'} font-bold uppercase tracking-wider ${currentPage === 'about' ? 'text-brand' : 'text-gray-500 dark:text-gray-400'} hover:text-brand transition-colors whitespace-nowrap`}
       >
-        {t.about[lang]}
+        {t('about')}
       </button>
     </>
   );

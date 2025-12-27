@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { Product, Category, CartItem, Order, Language, ShopSettings } from '../types';
 import { INITIAL_PRODUCTS, INITIAL_CATEGORIES } from '../constants';
+import { translations, getSafeTranslation } from '../translations';
 
 type Theme = 'light' | 'dark';
 const API_BASE = '/api';
@@ -8,7 +9,7 @@ const API_BASE = '/api';
 const DEFAULT_SETTINGS: ShopSettings = {
   aboutText: { en: 'Premium computing solutions.', ckb: 'چارەسەری کۆمپیوتەری بەهێز.', ar: 'حلول الحوسبة الراقية.' },
   aboutImage: '',
-  phones: [''],
+  phones: ['', ''],
   email: '',
   address: '',
   mapEmbed: '',
@@ -30,6 +31,7 @@ interface AppContextType {
   theme: Theme;
   isLoggedIn: boolean;
   isLoading: boolean;
+  t: (key: string) => string;
   setLang: (lang: Language) => void;
   toggleTheme: () => void;
   addToCart: (productId: string) => void;
@@ -66,19 +68,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
   const [categories, setCategories] = useState<Category[]>(INITIAL_CATEGORIES);
   const [cart, setCart] = useState<CartItem[]>(() => {
-    const saved = localStorage.getItem('cart');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('cart');
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
   });
   const [wishlist, setWishlist] = useState<string[]>(() => {
-    const saved = localStorage.getItem('wishlist');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('wishlist');
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
   });
   const [orders, setOrders] = useState<Order[]>([]);
   const [settings, setSettings] = useState<ShopSettings>(DEFAULT_SETTINGS);
-  const [lang, setLangState] = useState<Language>(() => (localStorage.getItem('lang') as Language) || 'en');
+  const [lang, setLangState] = useState<Language>(() => {
+    const saved = localStorage.getItem('lang');
+    return (saved === 'en' || saved === 'ckb' || saved === 'ar') ? saved as Language : 'en';
+  });
   const [theme, setTheme] = useState<Theme>(() => (localStorage.getItem('theme') as Theme) || 'light');
   const [isLoggedIn, setIsLoggedIn] = useState(() => !!localStorage.getItem('adminToken'));
   const [isLoading, setIsLoading] = useState(true);
+
+  const t = useCallback((key: string) => {
+    return getSafeTranslation(key, lang);
+  }, [lang]);
 
   useEffect(() => {
     localStorage.setItem('cart', JSON.stringify(cart));
@@ -126,7 +139,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       try {
         await Promise.all([refreshProducts(), refreshCategories()]);
         const sData = await safeFetchJson(`${API_BASE}/settings`);
-        if (sData && !sData.isError) setSettings(sData);
+        if (sData && !sData.isError) {
+          // Merge with defaults to ensure all properties exist
+          setSettings({
+            ...DEFAULT_SETTINGS,
+            ...sData,
+            aboutText: { ...DEFAULT_SETTINGS.aboutText, ...(sData.aboutText || {}) },
+            socials: { ...DEFAULT_SETTINGS.socials, ...(sData.socials || {}) }
+          });
+        }
         if (isLoggedIn) await refreshOrders();
       } catch (err) {
         console.error("Initialization Error:", err);
@@ -239,6 +260,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   return (
     <AppContext.Provider value={{
       products, categories, cart, wishlist, orders, settings, lang, theme, isLoggedIn, isLoading,
+      t,
       setLang: setLangState, toggleTheme: () => setTheme(t => t === 'light' ? 'dark' : 'light'),
       addToCart, removeFromCart, updateCartQuantity, clearCart, toggleWishlist,
       addOrder, trackOrder, updateProduct, deleteProduct, addProduct, bulkDeleteProducts, bulkUpdateDiscountAmount, bulkUpdateAvailability,

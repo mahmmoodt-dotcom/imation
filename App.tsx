@@ -10,14 +10,12 @@ import { AboutContact } from './pages/AboutContact';
 import { TrackOrder } from './pages/TrackOrder';
 import { ProductDetails } from './pages/ProductDetails';
 import { AIAssistant } from './components/AIAssistant';
-import { translations } from './translations';
 
 const AppContent: React.FC = () => {
   const [currentPage, setCurrentPage] = useState('home');
   const [selectedCategory, setSelectedCategory] = useState<string | undefined>(undefined);
   const [activeProductId, setActiveProductId] = useState<string | null>(null);
-  const { lang, settings, isLoading } = useApp();
-  const t = translations;
+  const { lang, settings, isLoading, t } = useApp();
 
   const handleShopNow = (categoryId?: string) => {
     setSelectedCategory(categoryId);
@@ -75,7 +73,8 @@ const AppContent: React.FC = () => {
     }
   };
 
-  const aboutText = settings?.aboutText?.[lang] || (lang === 'en' ? 'Welcome to Imation Shop' : 'بەخێربێن بۆ ئیمەیشن شۆپ');
+  // Safe fallback for about text
+  const aboutText = settings?.aboutText?.[lang] || settings?.aboutText?.['en'] || (lang === 'en' ? 'Welcome to Imation Shop' : 'بەخێربێن بۆ ئیمەیشن شۆپ');
 
   return (
     <div className="min-h-screen flex flex-col transition-colors duration-300 dark:bg-gray-950">
@@ -114,10 +113,10 @@ const AppContent: React.FC = () => {
                 {lang === 'en' ? 'Quick Links' : lang === 'ckb' ? 'بەستەرە خێراکان' : 'روابط سريعة'}
               </h4>
               <ul className="space-y-5">
-                <li><button onClick={() => handlePageChange('home')} className="text-gray-500 dark:text-gray-400 hover:text-brand transition-colors text-sm font-semibold">{t.home[lang]}</button></li>
-                <li><button onClick={() => handlePageChange('shop')} className="text-gray-500 dark:text-gray-400 hover:text-brand transition-colors text-sm font-semibold">{t.shop[lang]}</button></li>
-                <li><button onClick={() => handlePageChange('wishlist')} className="text-gray-500 dark:text-gray-400 hover:text-brand transition-colors text-sm font-semibold">{t.wishlist[lang]}</button></li>
-                <li><button onClick={() => handlePageChange('track')} className="text-gray-500 dark:text-gray-400 hover:text-brand transition-colors text-sm font-semibold">{t.track_order[lang]}</button></li>
+                <li><button onClick={() => handlePageChange('home')} className="text-gray-500 dark:text-gray-400 hover:text-brand transition-colors text-sm font-semibold">{t('home')}</button></li>
+                <li><button onClick={() => handlePageChange('shop')} className="text-gray-500 dark:text-gray-400 hover:text-brand transition-colors text-sm font-semibold">{t('shop')}</button></li>
+                <li><button onClick={() => handlePageChange('wishlist')} className="text-gray-500 dark:text-gray-400 hover:text-brand transition-colors text-sm font-semibold">{t('wishlist')}</button></li>
+                <li><button onClick={() => handlePageChange('track')} className="text-gray-500 dark:text-gray-400 hover:text-brand transition-colors text-sm font-semibold">{t('track_order')}</button></li>
               </ul>
             </div>
 
@@ -158,7 +157,7 @@ const AppContent: React.FC = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                   </svg>
                 </div>
-                <span className="text-xs font-black uppercase text-gray-500 group-hover:text-white tracking-widest">{t.admin[lang]}</span>
+                <span className="text-xs font-black uppercase text-gray-500 group-hover:text-white tracking-widest">{t('admin')}</span>
               </button>
             </div>
           </div>
