@@ -1,14 +1,32 @@
-
 import { GoogleGenAI } from "@google/genai";
 import { Product, Language } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Initialize lazily to avoid crashing the whole app if API_KEY is missing during mount
+let aiInstance: GoogleGenAI | null = null;
+
+const getAI = () => {
+  if (aiInstance) return aiInstance;
+  const apiKey = process.env.API_KEY;
+  if (!apiKey) {
+    console.warn("Gemini API Key is missing. AI Assistant will be disabled.");
+    return null;
+  }
+  aiInstance = new GoogleGenAI({ apiKey });
+  return aiInstance;
+};
 
 export const getHardwareAdvice = async (
   query: string,
   products: Product[],
   lang: Language
 ) => {
+  const ai = getAI();
+  if (!ai) {
+    return lang === 'en' 
+      ? "AI Assistant is currently unavailable." 
+      : "ببورە، یاریدەدەری زیرەک لەم کاتەدا بەردەست نییە.";
+  }
+
   const productList = products
     .filter(p => p.availability)
     .map(p => `- ${p.name[lang] || p.name.en}: $${p.price - (p.discount || 0)} (${p.description[lang] || p.description.en})`)
