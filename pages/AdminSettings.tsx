@@ -83,7 +83,7 @@ export const AdminSettings: React.FC = () => {
                 placeholder="Paste only the 'src' value from the Google Maps iframe share code"
                 onChange={e => setLocalSettings({...localSettings, mapEmbed: e.target.value})}
               />
-              <p className="mt-2 text-[9px] text-gray-400 font-bold uppercase">Go to Google Maps &gt; Share &gt; Embed a map &gt; Copy ONLY the URL inside src="..."</p>
+              <p className="mt-2 text-[9px] text-gray-400 font-bold uppercase">Go to Google Maps {' > '} Share {' > '} Embed a map {' > '} Copy ONLY the URL inside src="..."</p>
             </div>
           </div>
 
