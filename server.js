@@ -16,7 +16,9 @@ const getSupabase = () => {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_ANON_KEY;
   if (!url || !key) {
-    throw new Error("Supabase environment variables (SUPABASE_URL, SUPABASE_ANON_KEY) are missing.");
+    // In production, log warning but don't crash the server until an actual upload is attempted
+    console.warn("Supabase environment variables (SUPABASE_URL, SUPABASE_ANON_KEY) are currently missing.");
+    return null;
   }
   supabaseInstance = createClient(url, key);
   return supabaseInstance;
@@ -40,6 +42,8 @@ const pool = new Pool({
  */
 const uploadToSupabase = async (file, folder = 'products') => {
   const sb = getSupabase();
+  if (!sb) throw new Error("Supabase client is not initialized. Check environment variables.");
+  
   const filename = `${Date.now()}-${file.originalname.replace(/[^a-zA-Z0-9.]/g, '_')}`;
   const filePath = `${folder}/${filename}`;
   
