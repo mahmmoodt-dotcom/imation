@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { AppProvider, useApp } from './store/AppContext';
 import { Navbar } from './components/Navbar';
@@ -8,6 +9,7 @@ import { Admin } from './pages/Admin';
 import { AboutContact } from './pages/AboutContact';
 import { TrackOrder } from './pages/TrackOrder';
 import { ProductDetails } from './pages/ProductDetails';
+import { AIAssistant } from './components/AIAssistant';
 import { translations } from './translations';
 
 const AppContent: React.FC = () => {
@@ -168,6 +170,9 @@ const AppContent: React.FC = () => {
           </div>
         </div>
       </footer>
+      
+      {/* World-Class AI Assistant Component */}
+      <AIAssistant />
     </div>
   );
 };
