@@ -1,0 +1,68 @@
+
+# PRODUCTION BACKEND SETUP (STRICT SCHEMA)
+
+Ensure your PostgreSQL database matches these definitions exactly for the mapping logic to work.
+
+1. **Database Schema**:
+   CREATE TABLE categories (
+     id SERIAL PRIMARY KEY,
+     name_en TEXT NOT NULL,
+     name_ku TEXT NOT NULL,
+     name_ar TEXT NOT NULL,
+     description_en TEXT,
+     description_ku TEXT,
+     description_ar TEXT,
+     image TEXT
+   );
+
+   CREATE TABLE products (
+     id SERIAL PRIMARY KEY,
+     name_en TEXT NOT NULL,
+     name_ku TEXT NOT NULL,
+     name_ar TEXT NOT NULL,
+     description_en TEXT,
+     description_ku TEXT,
+     description_ar TEXT,
+     price DECIMAL(12,2) NOT NULL DEFAULT 0,
+     discount DECIMAL(12,2) DEFAULT 0, -- FIXED DOLLAR AMOUNT
+     category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
+     images JSONB DEFAULT '[]', -- Array of Base64 or URLs
+     availability BOOLEAN DEFAULT TRUE,
+     specs JSONB DEFAULT '[]',
+     created_at TIMESTAMP DEFAULT NOW()
+   );
+
+   CREATE TABLE orders (
+     id VARCHAR(30) PRIMARY KEY,
+     invoice_number VARCHAR(30) UNIQUE,
+     customer_name TEXT NOT NULL,
+     phone TEXT NOT NULL,
+     secondary_phone TEXT,
+     city TEXT,
+     address TEXT,
+     items JSONB, -- Snapshot of product IDs and counts
+     total DECIMAL(12,2),
+     status VARCHAR(20) DEFAULT 'pending',
+     shipping_driver TEXT,
+     lang VARCHAR(5),
+     created_at TIMESTAMP DEFAULT NOW(),
+     order_date TIMESTAMP DEFAULT NOW()
+   );
+
+   CREATE TABLE settings (
+     id SERIAL PRIMARY KEY,
+     about_text JSONB, -- {en, ckb, ar}
+     about_image TEXT,
+     phones JSONB, -- Array
+     email TEXT,
+     address TEXT,
+     map_embed TEXT,
+     floating_hero_image TEXT,
+     home_feature_image TEXT,
+     main_logo TEXT,
+     brand_logos JSONB, -- Array
+     socials JSONB -- {whatsapp, instagram, facebook, tiktok}
+   );
+
+2. **Server Mapping**:
+   The backend logic (server.js) maps frontend {en, ckb, ar} objects to individual _en, _ku, _ar columns for searchability and standard SQL practices.
