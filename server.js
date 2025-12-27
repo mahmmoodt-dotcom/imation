@@ -1,4 +1,3 @@
-
 const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
@@ -26,6 +25,10 @@ const pool = new Pool({
 });
 
 const initDb = async () => {
+  if (!process.env.DATABASE_URL) {
+    console.warn("DATABASE_URL not set. Running in limited mode.");
+    return;
+  }
   let retries = 5;
   while (retries > 0) {
     try {
@@ -150,7 +153,7 @@ app.post('/api/login', (req, res) => {
   res.status(401).json({ error: 'Wrong password' });
 });
 
-// Products
+// API Routes
 app.get('/api/products', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM products ORDER BY created_at DESC');
@@ -215,93 +218,16 @@ app.post('/api/admin/categories', authenticateAdmin, upload.single('image'), asy
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// Orders & Settings
-app.post('/api/orders', async (req, res) => {
-  try {
-    const { customerName, phone, secondaryPhone, city, address, items, total, lang } = req.body;
-    const id = 'ORD-' + Math.random().toString(36).substr(2, 9).toUpperCase();
-    const inv = 'INV-' + Date.now();
-    const result = await pool.query(
-      `INSERT INTO orders (id, invoice_number, customer_name, phone, secondary_phone, city, address, items, total, lang) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
-      [id, inv, customerName, phone, secondaryPhone, city, address, JSON.stringify(items), total, lang]
-    );
-    res.json({ ...result.rows[0], invoiceNumber: result.rows[0].invoice_number, customerName: result.rows[0].customer_name });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.get('/api/orders/track', async (req, res) => {
-  try {
-    const result = await pool.query('SELECT * FROM orders WHERE id = $1 AND phone = $2', [req.query.id, req.query.phone]);
-    if (result.rows[0]) res.json({ ...result.rows[0], invoiceNumber: result.rows[0].invoice_number, customerName: result.rows[0].customer_name });
-    else res.status(404).json({ error: 'Not found' });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.get('/api/admin/orders', authenticateAdmin, async (req, res) => {
-  try {
-    const result = await pool.query('SELECT * FROM orders ORDER BY created_at DESC');
-    res.json(result.rows.map(o => ({ ...o, invoiceNumber: o.invoice_number, customerName: o.customer_name })));
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.get('/api/settings', async (req, res) => {
-  try {
-    const r = await pool.query('SELECT * FROM settings LIMIT 1');
-    const s = r.rows[0];
-    if (!s) return res.status(404).json({ error: 'No settings' });
-    res.json({
-      aboutText: typeof s.about_text === 'string' ? JSON.parse(s.about_text) : s.about_text,
-      aboutImage: s.about_image,
-      phones: typeof s.phones === 'string' ? JSON.parse(s.phones) : s.phones,
-      email: s.email, address: s.address, mapEmbed: s.map_embed,
-      homeFeatureImage: s.home_feature_image, mainLogo: s.main_logo,
-      socials: typeof s.socials === 'string' ? JSON.parse(s.socials) : s.socials
-    });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.put('/api/settings', authenticateAdmin, async (req, res) => {
-  try {
-    const s = req.body;
-    await pool.query(
-      `UPDATE settings SET about_text=$1, phones=$2, email=$3, address=$4, map_embed=$5, socials=$6 WHERE id=(SELECT id FROM settings LIMIT 1)`,
-      [JSON.stringify(s.aboutText), JSON.stringify(s.phones), s.email, s.address, s.mapEmbed, JSON.stringify(s.socials)]
-    );
-    res.json({ success: true });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// Visual Update Endpoints
-app.put('/api/admin/settings/home_feature_image', authenticateAdmin, upload.single('image'), async (req, res) => {
-  try {
-    const img = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
-    await pool.query(`UPDATE settings SET home_feature_image = $1 WHERE id=(SELECT id FROM settings LIMIT 1)`, [img]);
-    res.json({ image: img });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.put('/api/admin/settings/about_image', authenticateAdmin, upload.single('image'), async (req, res) => {
-  try {
-    const img = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
-    await pool.query(`UPDATE settings SET about_image = $1 WHERE id=(SELECT id FROM settings LIMIT 1)`, [img]);
-    res.json({ image: img });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// Static Hosting (Production)
+// Serving the static files for production
 const distPath = path.resolve(__dirname, 'dist');
 app.use(express.static(distPath));
 
 // API 404
 app.use('/api/*', (req, res) => res.status(404).json({ error: 'Endpoint not found' }));
 
-// SPA Fallback
+// SPA Fallback: Send index.html for all other routes
 app.get('*', (req, res) => {
-  res.sendFile(path.join(distPath, 'index.html'), (err) => {
-    if (err) {
-      res.status(500).send("Build artifacts missing. Run 'npm run build' first.");
-    }
-  });
+  res.sendFile(path.join(distPath, 'index.html'));
 });
 
 app.listen(PORT, () => console.log(`Server live on port ${PORT}`));
