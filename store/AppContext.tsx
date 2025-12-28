@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { Product, Category, CartItem, Order, Language, ShopSettings } from '../types';
 import { INITIAL_PRODUCTS, INITIAL_CATEGORIES } from '../constants';
@@ -6,14 +7,17 @@ import { translations, getSafeTranslation } from '../translations';
 type Theme = 'light' | 'dark';
 const API_BASE = '/api';
 
+// Using a high-quality, professional workstation image as a global default fallback
+const DEFAULT_HERO_ASSET = "https://images.unsplash.com/photo-1593640408182-31c70c8268f5?q=80&w=2000&auto=format&fit=crop";
+
 const DEFAULT_SETTINGS: ShopSettings = {
-  aboutText: { en: 'Premium computing solutions.', ckb: 'چارەسەری کۆمپیوتەری بەهێز.', ar: 'حلول الحوسبة الراقية.' },
+  aboutText: { en: 'Premium computing solutions for enthusiasts and professionals.', ckb: 'چارەسەری کۆمپیوتەری بەهێز بۆ شارەزایان و پڕۆفیشناڵەکان.', ar: 'حلول الحوسبة الراقية للمحترفين والهواة.' },
   aboutImage: '',
-  phones: ['', ''],
-  email: '',
-  address: '',
+  phones: ['0770 123 4567'],
+  email: 'info@imation.com',
+  address: 'Erbil, Iraq',
   mapEmbed: '',
-  floatingHeroImage: '',
+  floatingHeroImage: DEFAULT_HERO_ASSET, // Fallback asset
   homeFeatureImage: '',
   mainLogo: '', 
   brandLogos: [],
@@ -143,8 +147,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setSettings({
             ...DEFAULT_SETTINGS,
             ...sData,
+            // Deep merge to ensure defaults exist even if server only returns partial data
             aboutText: { ...DEFAULT_SETTINGS.aboutText, ...(sData.aboutText || {}) },
-            socials: { ...DEFAULT_SETTINGS.socials, ...(sData.socials || {}) }
+            socials: { ...DEFAULT_SETTINGS.socials, ...(sData.socials || {}) },
+            floatingHeroImage: sData.floating_hero_image || sData.floatingHeroImage || DEFAULT_SETTINGS.floatingHeroImage,
+            homeFeatureImage: sData.home_feature_image || sData.homeFeatureImage || ''
           });
         }
         if (isLoggedIn) await refreshOrders();

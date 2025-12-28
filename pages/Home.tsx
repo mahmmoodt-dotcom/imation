@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useApp } from '../store/AppContext';
 import { translations } from '../translations';
@@ -68,6 +69,9 @@ export const Home: React.FC<{ onShopNow: (categoryId?: string) => void, onOpenPr
   const latest = [...products].reverse().slice(0, 8);
   const bestSellers = products.slice(0, 4);
 
+  // Robust Hero Image Fallback Logic
+  const heroImageSrc = settings.homeFeatureImage || settings.floatingHeroImage || "https://images.unsplash.com/photo-1593640408182-31c70c8268f5?q=80&w=2000&auto=format&fit=crop";
+
   return (
     <div className="space-y-24 pb-16 overflow-hidden">
       {/* Hero Section */}
@@ -104,11 +108,17 @@ export const Home: React.FC<{ onShopNow: (categoryId?: string) => void, onOpenPr
           <div className="flex-1 w-full flex justify-center items-center relative z-10 animate-fade-in-up">
             <div className="relative">
               <div className="absolute inset-0 bg-brand/20 blur-[120px] rounded-full scale-150"></div>
-              <img 
-                src={settings.homeFeatureImage || settings.floatingHeroImage} 
-                alt="Feature Banner" 
-                className="max-w-full h-auto object-contain drop-shadow-[0_35px_35px_rgba(0,0,0,0.25)] animate-float"
-              />
+              {heroImageSrc && (
+                <img 
+                  src={heroImageSrc} 
+                  alt="Feature Banner" 
+                  className="max-w-full h-auto object-contain drop-shadow-[0_35px_35px_rgba(0,0,0,0.25)] animate-float"
+                  onError={(e) => {
+                    // Final fallback if the path is invalid or server 404s
+                    (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1593640408182-31c70c8268f5?q=80&w=2000&auto=format&fit=crop";
+                  }}
+                />
+              )}
             </div>
           </div>
         </div>
@@ -139,6 +149,30 @@ export const Home: React.FC<{ onShopNow: (categoryId?: string) => void, onOpenPr
           ))}
         </div>
       </section>
+
+      {/* Brand Carousel (Marquee) */}
+      {settings.brandLogos && settings.brandLogos.length > 0 && (
+        <section className="reveal py-12 border-y dark:border-gray-800/50">
+          <div className="max-w-7xl mx-auto px-4 mb-8">
+            <h3 className="text-[10px] font-black uppercase text-gray-400 tracking-[0.3em] text-center">Engineered with Global Partners</h3>
+          </div>
+          <div className="relative flex overflow-x-hidden group">
+            <div className="py-8 animate-marquee whitespace-nowrap flex items-center gap-16 md:gap-32">
+              {[...settings.brandLogos, ...settings.brandLogos, ...settings.brandLogos].map((logo, idx) => (
+                <img 
+                  key={idx} 
+                  src={logo} 
+                  className="h-10 md:h-14 w-auto object-contain grayscale opacity-30 dark:opacity-20 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-500 hover:scale-110" 
+                  alt="Partner Brand" 
+                />
+              ))}
+            </div>
+            {/* Gradient masks for smooth edges */}
+            <div className="absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-gray-50 dark:from-gray-950 to-transparent pointer-events-none z-10"></div>
+            <div className="absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-gray-50 dark:from-gray-950 to-transparent pointer-events-none z-10"></div>
+          </div>
+        </section>
+      )}
 
       {/* Best Sellers (Horizontal Strip) */}
       <section className="bg-gray-100 dark:bg-gray-900/50 py-24 reveal">
