@@ -4,28 +4,48 @@ const jwt = require('jsonwebtoken');
 const { Pool } = require('pg');
 const multer = require('multer');
 const path = require('path');
-const { createClient } = require('@supabase/supabase-js');
+const fs = require('fs');
 
 const app = express();
-const upload = multer({ storage: multer.memoryStorage() });
 
-// Lazy initialization for Supabase to prevent boot crash if env vars are missing
-let supabaseInstance = null;
-const getSupabase = () => {
-  if (supabaseInstance) return supabaseInstance;
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_ANON_KEY;
-  if (!url || !key) {
-    console.warn("Supabase environment variables (SUPABASE_URL, SUPABASE_ANON_KEY) are currently missing.");
-    return null;
+// Ensure uploads directory exists for persistence
+const uploadDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+// Multer Disk Storage Configuration
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/');
+  },
+  filename: (req, file, cb) => {
+    // Generate unique filename with timestamp to prevent collisions
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
   }
-  supabaseInstance = createClient(url, key);
-  return supabaseInstance;
-};
+});
+
+const upload = multer({ 
+  storage: storage,
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB Hard Limit
+  fileFilter: (req, file, cb) => {
+    const filetypes = /jpeg|jpg|png|webp/;
+    const mimetype = filetypes.test(file.mimetype);
+    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+    if (mimetype && extname) {
+      return cb(null, true);
+    }
+    cb(new Error("Only .jpg, .png, and .webp images under 2MB are supported."));
+  }
+});
 
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// SERVE UPLOADS PUBLICLY
+app.use('/uploads', express.static(uploadDir));
 
 const PORT = process.env.PORT || 3001;
 const JWT_SECRET = process.env.JWT_SECRET || 'imation-shop-secret-2025';
@@ -35,32 +55,6 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 });
-
-/**
- * Helper to upload a Multer file buffer to Supabase Storage
- */
-const uploadToSupabase = async (file, folder = 'products') => {
-  const sb = getSupabase();
-  if (!sb) throw new Error("Supabase client is not initialized.");
-  
-  const filename = `${Date.now()}-${file.originalname.replace(/[^a-zA-Z0-9.]/g, '_')}`;
-  const filePath = `${folder}/${filename}`;
-  
-  const { data, error } = await sb.storage
-    .from('product-images')
-    .upload(filePath, file.buffer, {
-      contentType: file.mimetype,
-      upsert: false
-    });
-
-  if (error) throw error;
-
-  const { data: { publicUrl } } = sb.storage
-    .from('product-images')
-    .getPublicUrl(filePath);
-
-  return publicUrl;
-};
 
 const initDb = async () => {
   try {
@@ -106,8 +100,7 @@ const initDb = async () => {
         status VARCHAR(20) DEFAULT 'pending',
         shipping_driver TEXT,
         lang VARCHAR(5),
-        created_at TIMESTAMP DEFAULT NOW(),
-        order_date TIMESTAMP DEFAULT NOW()
+        created_at TIMESTAMP DEFAULT NOW()
       );
 
       CREATE TABLE IF NOT EXISTS settings (
@@ -140,10 +133,7 @@ const initDb = async () => {
         ]
       );
     }
-    console.log("Database initialized.");
-  } catch (err) {
-    console.error("DB Init Error:", err.message);
-  }
+  } catch (err) { console.error("DB Init Error:", err.message); }
 };
 
 initDb();
@@ -158,20 +148,8 @@ const authenticateAdmin = (req, res, next) => {
   } catch (err) { res.status(401).json({ error: 'Invalid Token' }); }
 };
 
-const mapRowToProduct = (r) => ({
-  id: r.id.toString(),
-  name: { en: r.name_en, ckb: r.name_ku, ar: r.name_ar },
-  description: { en: r.description_en, ckb: r.description_ku, ar: r.description_ar },
-  price: parseFloat(r.price || 0),
-  discount: parseFloat(r.discount || 0),
-  category: r.category_id ? r.category_id.toString() : '',
-  images: typeof r.images === 'string' ? JSON.parse(r.images) : (r.images || []),
-  availability: !!r.availability,
-  specs: typeof r.specs === 'string' ? JSON.parse(r.specs) : (r.specs || []),
-  createdAt: r.created_at
-});
+// --- API ROUTES ---
 
-// API Routes
 app.post('/api/login', (req, res) => {
   if (req.body.password === ADMIN_PASS) {
     const token = jwt.sign({ admin: true }, JWT_SECRET, { expiresIn: '30d' });
@@ -180,25 +158,27 @@ app.post('/api/login', (req, res) => {
   res.status(401).json({ error: 'Wrong password' });
 });
 
+// STANDALONE UPLOAD ROUTE (Admin Authenticated)
+app.post('/api/upload', authenticateAdmin, upload.single('image'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+  res.json({ url: `/uploads/${req.file.filename}` });
+});
+
 app.get('/api/products', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM products ORDER BY created_at DESC');
-    res.json(result.rows.map(mapRowToProduct));
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.post('/api/admin/products', authenticateAdmin, upload.array('images', 3), async (req, res) => {
-  try {
-    const b = req.body;
-    const uploadPromises = req.files.map(file => uploadToSupabase(file, 'products'));
-    const imageUrls = await Promise.all(uploadPromises);
-
-    const result = await pool.query(
-      `INSERT INTO products (name_en, name_ku, name_ar, description_en, description_ku, description_ar, price, discount, category_id, availability, images)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
-      [b.name_en, b.name_ku, b.name_ar, b.description_en, b.description_ku, b.description_ar, b.price, b.discount, b.category_id || null, b.availability === 'true', JSON.stringify(imageUrls)]
-    );
-    res.json(mapRowToProduct(result.rows[0]));
+    res.json(result.rows.map(r => ({
+      id: r.id.toString(),
+      name: { en: r.name_en, ckb: r.name_ku, ar: r.name_ar },
+      description: { en: r.description_en, ckb: r.description_ku, ar: r.description_ar },
+      price: parseFloat(r.price || 0),
+      discount: parseFloat(r.discount || 0),
+      category: r.category_id ? r.category_id.toString() : '',
+      images: typeof r.images === 'string' ? JSON.parse(r.images) : (r.images || []),
+      availability: !!r.availability,
+      specs: typeof r.specs === 'string' ? JSON.parse(r.specs) : (r.specs || []),
+      createdAt: r.created_at
+    })));
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -213,20 +193,6 @@ app.get('/api/categories', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/orders', async (req, res) => {
-  try {
-    const b = req.body;
-    const id = 'ORD-' + Math.random().toString(36).substring(2, 8).toUpperCase();
-    const inv = 'INV-' + Date.now();
-    const result = await pool.query(
-      `INSERT INTO orders (id, invoice_number, customer_name, phone, secondary_phone, city, address, items, total, lang)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
-      [id, inv, b.customerName, b.phone, b.secondaryPhone, b.city, b.address, JSON.stringify(b.items), b.total, b.lang]
-    );
-    res.json(result.rows[0]);
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
 app.get('/api/settings', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM settings LIMIT 1');
@@ -234,7 +200,7 @@ app.get('/api/settings', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// SPA Support: Serve React build and redirect all other routes to index.html
+// SPA Support
 const distPath = path.resolve(__dirname, 'dist');
 app.use(express.static(distPath));
 app.get('*', (req, res) => {
@@ -242,4 +208,4 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(distPath, 'index.html'));
 });
 
-app.listen(PORT, () => console.log(`Server live on port ${PORT}`));
+app.listen(PORT, () => console.log(`Imation Backend active on port ${PORT}`));

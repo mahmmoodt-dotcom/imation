@@ -1,3 +1,4 @@
+
 import { TranslationDictionary, Language } from './types';
 
 export const translations: TranslationDictionary = {
@@ -31,6 +32,7 @@ export const translations: TranslationDictionary = {
   manage_categories: { en: 'Categories', ckb: 'هاوپۆلەکان', ar: 'الفئات' },
   manage_orders: { en: 'Orders', ckb: 'داواکارییەکان', ar: 'الطلبات' },
   manage_settings: { en: 'Settings', ckb: 'ڕێکخستنەکان', ar: 'الإعدادات' },
+  manage_media: { en: 'Media', ckb: 'میدیا', ar: 'الوسائط' },
   add_product: { en: 'Add New Product', ckb: 'زیادکردنی کاڵا', ar: 'إضافة منتج جديد' },
   edit_product: { en: 'Edit Product', ckb: 'دەستکاری کاڵا', ar: 'تعديل المنتج' },
   product_name: { en: 'Product Name', ckb: 'ناوی کاڵا', ar: 'اسم المنتج' },
@@ -117,10 +119,6 @@ export const translations: TranslationDictionary = {
   best_sellers: { en: 'Best Sellers', ckb: 'پڕفرۆشترینەکان', ar: 'الأكثر مبيعاً' },
 };
 
-/**
- * Safe utility to get a translation string.
- * It will try the target language, then English, then fall back to the key name.
- */
 export const getSafeTranslation = (key: string, lang: Language): string => {
   const entry = translations[key];
   if (!entry) return key;

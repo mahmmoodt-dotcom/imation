@@ -5,6 +5,7 @@ import { translations } from '../translations';
 import { AdminProducts } from './AdminProducts';
 import { AdminCategories } from './AdminCategories';
 import { AdminSettings } from './AdminSettings';
+import { AdminMedia } from './AdminMedia';
 
 export const Admin: React.FC = () => {
   const { 
@@ -15,7 +16,7 @@ export const Admin: React.FC = () => {
   const [passwordInput, setPasswordInput] = useState('');
   const [loginError, setLoginError] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'products' | 'categories' | 'settings'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'products' | 'categories' | 'settings' | 'media'>('dashboard');
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,7 +66,7 @@ export const Admin: React.FC = () => {
           <a href="/" className="px-3 py-1 bg-gray-100 dark:bg-gray-800 rounded-lg text-[10px] font-black uppercase text-gray-500 hover:bg-brand hover:text-white transition-all">View Store</a>
         </div>
         <div className="flex gap-2 bg-gray-100 dark:bg-gray-800 p-1.5 rounded-2xl overflow-x-auto no-scrollbar">
-          {(['dashboard', 'products', 'categories', 'settings'] as const).map(tab => (
+          {(['dashboard', 'products', 'categories', 'settings', 'media'] as const).map(tab => (
             <button key={tab} onClick={() => setActiveTab(tab)} className={`px-5 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === tab ? 'bg-brand text-white shadow-lg' : 'text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700'}`}>
               {tab === 'dashboard' ? t.dashboard[lang] : t[`manage_${tab}` as keyof typeof t][lang]}
             </button>
@@ -94,6 +95,7 @@ export const Admin: React.FC = () => {
       {activeTab === 'products' && <AdminProducts />}
       {activeTab === 'categories' && <AdminCategories />}
       {activeTab === 'settings' && <AdminSettings />}
+      {activeTab === 'media' && <AdminMedia />}
     </div>
   );
 };

@@ -140,7 +140,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         await Promise.all([refreshProducts(), refreshCategories()]);
         const sData = await safeFetchJson(`${API_BASE}/settings`);
         if (sData && !sData.isError) {
-          // Merge with defaults to ensure all properties exist
           setSettings({
             ...DEFAULT_SETTINGS,
             ...sData,
